@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>資金配置計算器</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: #232830;
+    --accent: #c8f04a;
+    --attack: #f0724a;
+    --defense: #4a8cf0;
+    --text: #e8ecf0;
+    --text2: #7a8494;
+    --text3: #4a5264;
+    --red: #f04a6a;
+    --green: #4af09a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh; padding: 40px 20px;
+    position: relative; overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; top: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(200,240,74,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  body::after {
+    content: ''; position: fixed; bottom: -200px; left: -200px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(74,143,240,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .container { max-width: 780px; margin: 0 auto; }
+  header { margin-bottom: 48px; }
+  .label-tag {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--accent); letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 12px; opacity: 0.8;
+  }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.2; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--text2); font-size: 14px; margin-top: 8px; font-weight: 300; }
+
+.input-section {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 16px; padding: 32px; margin-bottom: 24px;
+}
+.section-title {
+font-family: ‘DM Mono’, monospace; font-size: 11px;
+color: var(–text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px;
+}
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.input-group { display: flex; flex-direction: column; gap: 8px; }
+.input-group label { font-size: 13px; color: var(–text2); }
+.input-wrapper { position: relative; display: flex; align-items: center; }
+.input-wrapper input {
+width: 100%; background: var(–surface2);
+border: 1px solid var(–border); border-radius: 10px;
+padding: 12px 16px; color: var(–text);
+font-size: 15px; font-family: ‘DM Mono’, monospace;
+outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-wrapper input:focus {
+border-color: var(–accent);
+box-shadow: 0 0 0 3px rgba(200,240,74,0.08);
+}
+.input-wrapper .unit {
+position: absolute; right: 14px; font-size: 12px;
+color: var(–text3); font-family: ‘DM Mono’, monospace; pointer-events: none;
+}
+.mode-toggle {
+display: flex; background: var(–surface2);
+border: 1px solid var(–border); border-radius: 10px; padding: 4px;
+}
+.mode-btn {
+flex: 1; padding: 10px 16px; border: none;
+background: transparent; color: var(–text2);
+font-size: 13px; font-family: ‘Noto Sans TC’, sans-serif;
+cursor: pointer; border-radius: 7px; transition: all 0.2s;
+}
+.mode-btn.active { background: var(–accent); color: #0a0c0f; font-weight: 700; }
+
+.stocks-section { margin-top: 20px; }
+.stocks-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.stock-count { display: flex; align-items: center; gap: 8px; }
+.count-btn {
+width: 28px; height: 28px; border-radius: 7px;
+border: 1px solid var(–border); background: var(–surface2);
+color: var(–text); font-size: 16px; cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+transition: all 0.15s;
+}
+.count-btn:hover { border-color: var(–accent); color: var(–accent); }
+.count-num {
+font-family: ‘DM Mono’, monospace; font-size: 15px;
+min-width: 20px; text-align: center; color: var(–accent);
+}
+.stock-inputs { display: flex; flex-direction: column; gap: 12px; }
+
+.sic {
+background: var(–surface2); border: 1px solid var(–border);
+border-radius: 12px; padding: 14px 16px;
+transition: border-color 0.25s;
+}
+.sic.loading { border-color: rgba(200,240,74,0.35); }
+.sic.loaded  { border-color: rgba(74,240,154,0.35); }
+.sic.error   { border-color: rgba(240,74,106,0.35); }
+
+.sic-top {
+display: grid; grid-template-columns: 42px 1fr 126px;
+gap: 10px; align-items: center; margin-bottom: 10px;
+}
+.sic-idx {
+font-family: ‘DM Mono’, monospace; font-size: 12px; color: var(–text3);
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 7px; height: 40px;
+display: flex; align-items: center; justify-content: center;
+}
+.sic-code {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 8px; padding: 9px 13px; height: 40px;
+color: var(–text); font-size: 15px; font-family: ‘DM Mono’, monospace;
+outline: none; width: 100%; transition: border-color 0.2s; letter-spacing: 1px;
+}
+.sic-code:focus { border-color: var(–accent); }
+.sic-unit {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 8px; padding: 9px 28px 9px 11px; height: 40px;
+color: var(–text); font-size: 13px; font-family: ‘Noto Sans TC’, sans-serif;
+outline: none; cursor: pointer; width: 100%;
+-webkit-appearance: none; appearance: none;
+background-image: url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘11’ height=‘7’ fill=‘none’%3E%3Cpath d=‘M1 1l4.5 4.5L10 1’ stroke=’%234a5264’ stroke-width=‘1.5’ stroke-linecap=‘round’/%3E%3C/svg%3E”);
+background-repeat: no-repeat; background-position: right 9px center;
+transition: border-color 0.2s;
+}
+.sic-unit:focus { border-color: var(–accent); }
+
+.sic-info { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 26px; }
+.tag-name {
+font-size: 13px; font-weight: 500;
+background: rgba(200,240,74,0.08); border: 1px solid rgba(200,240,74,0.15);
+padding: 2px 10px; border-radius: 5px;
+}
+.tag-price { font-family: ‘DM Mono’, monospace; font-size: 14px; font-weight: 500; }
+.tag-change {
+font-family: ‘DM Mono’, monospace; font-size: 11px;
+padding: 2px 7px; border-radius: 4px;
+}
+.tag-change.up   { color: var(–red);   background: rgba(240,74,106,0.1); }
+.tag-change.down { color: var(–green); background: rgba(74,240,154,0.1); }
+.tag-change.flat { color: var(–text3); background: rgba(255,255,255,0.05); }
+.tag-meta { font-size: 12px; color: var(–text3); }
+.tag-spin { font-size: 12px; color: var(–accent); animation: blink 1s infinite; }
+.tag-err  { font-size: 12px; color: var(–red); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+.sic-manual { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.sic-manual-lbl { font-size: 12px; color: var(–text3); }
+.sic-manual-inp {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 7px; padding: 6px 11px;
+color: var(–text); font-size: 13px; font-family: ‘DM Mono’, monospace;
+outline: none; width: 110px; transition: border-color 0.2s;
+}
+.sic-manual-inp:focus { border-color: var(–accent); }
+
+.calc-btn {
+width: 100%; padding: 16px; background: var(–accent); color: #0a0c0f;
+border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+font-family: ‘Noto Sans TC’, sans-serif; cursor: pointer; margin-top: 24px;
+transition: all 0.2s; letter-spacing: 1px;
+}
+.calc-btn:hover { background: #d4f55a; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(200,240,74,0.2); }
+.calc-btn:active { transform: translateY(0); }
+
+.results { display: none; flex-direction: column; gap: 16px; animation: fadeUp 0.4s ease; }
+.results.show { display: flex; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+.overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.overview-card {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 14px; padding: 20px;
+}
+.overview-card.attack { border-color: rgba(240,114,74,0.3); }
+.overview-card.defense { border-color: rgba(74,140,240,0.3); }
+.card-label {
+font-family: ‘DM Mono’, monospace; font-size: 10px;
+letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;
+}
+.attack .card-label { color: var(–attack); }
+.defense .card-label { color: var(–defense); }
+.card-amount { font-family: ‘DM Mono’, monospace; font-size: 20px; font-weight: 500; }
+.card-ratio { font-size: 12px; color: var(–text3); margin-top: 4px; }
+
+.stock-result { background: var(–surface); border: 1px solid var(–border); border-radius: 16px; overflow: hidden; }
+.srh {
+display: flex; justify-content: space-between; align-items: center;
+padding: 14px 20px; border-bottom: 1px solid var(–border); background: var(–surface2);
+}
+.srh-left { display: flex; flex-direction: column; gap: 3px; }
+.srh-name { font-size: 15px; font-weight: 500; }
+.srh-meta { font-family: ‘DM Mono’, monospace; font-size: 12px; color: var(–text3); }
+.srh-badge {
+font-family: ‘DM Mono’, monospace; font-size: 12px;
+color: var(–attack); background: rgba(240,114,74,0.1);
+border: 1px solid rgba(240,114,74,0.2);
+padding: 5px 12px; border-radius: 6px; text-align: right; line-height: 1.5;
+}
+.portions-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(–border); }
+.portion-cell { background: var(–surface); padding: 16px; text-align: center; }
+.pc-label { font-family: ‘DM Mono’, monospace; font-size: 10px; color: var(–text3); letter-spacing: 1px; margin-bottom: 6px; }
+.pc-amt { font-family: ‘DM Mono’, monospace; font-size: 14px; font-weight: 500; }
+.pc-shares { font-family: ‘DM Mono’, monospace; font-size: 12px; color: var(–text2); margin-top: 4px; }
+.pc-purpose { font-size: 10px; margin-top: 6px; padding: 3px 8px; border-radius: 4px; display: inline-block; }
+.p1 .pc-purpose { background: rgba(200,240,74,0.1); color: var(–accent); }
+.p2 .pc-purpose { background: rgba(240,200,74,0.1); color: #f0c84a; }
+.p3 .pc-purpose { background: rgba(74,143,240,0.1); color: var(–defense); }
+
+.defense-result {
+background: var(–surface); border: 1px solid rgba(74,140,240,0.2);
+border-radius: 14px; padding: 20px 24px;
+display: flex; justify-content: space-between; align-items: center;
+}
+.dlabel { font-family: ‘DM Mono’, monospace; font-size: 10px; color: var(–defense); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+.damount { font-family: ‘DM Mono’, monospace; font-size: 22px; font-weight: 500; }
+.dnote { font-size: 12px; color: var(–text3); text-align: right; line-height: 1.6; }
+
+.results-label {
+font-family: ‘DM Mono’, monospace; font-size: 10px; color: var(–text3);
+letter-spacing: 3px; text-transform: uppercase;
+padding: 8px 0 4px; border-top: 1px solid var(–border); margin-top: 4px;
+}
+.remainder-note {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 10px; padding: 12px 16px; font-size: 12px; color: var(–text2);
+display: flex; gap: 8px;
+}
+.remainder-note .dot { color: var(–accent); flex-shrink: 0; }
+
+@media (max-width: 540px) {
+.input-row, .overview-grid { grid-template-columns: 1fr; }
+.sic-top { grid-template-columns: 36px 1fr 110px; }
+h1 { font-size: 22px; }
+}
+</style>
+
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="label-tag">// PORTFOLIO ALLOCATOR v1.1</div>
+    <h1>資金配置<span>計算器</span></h1>
+    <p class="subtitle">進攻 × 防守 × 分批布局 ─ 串接台灣證交所／櫃買中心收盤行情</p>
+  </header>
+
+  <div class="input-section">
+    <div class="section-title">// 基本設定</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>總資金</label>
+        <div class="input-wrapper">
+          <input type="number" id="totalCapital" placeholder="例：1000000" min="0">
+          <span class="unit">元</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>客戶名稱 <span style="color:var(--text3);font-size:11px">（選填）</span></label>
+        <div class="input-wrapper">
+          <input type="text" id="clientName" placeholder="例：王小明">
+        </div>
+      </div>
+    </div>
+
+```
+<div class="input-group" style="margin-bottom:20px">
+  <label>市場環境</label>
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('normal')" id="btn-normal">一般環境　攻守 5:5</button>
+    <button class="mode-btn" onclick="setMode('good')" id="btn-good">好時機　攻守 6:4</button>
+  </div>
+</div>
+
+<div class="stocks-section">
+  <div class="stocks-header">
+    <label style="font-size:13px;color:var(--text2)">買入股票清單</label>
+    <div class="stock-count">
+      <button class="count-btn" onclick="changeStockCount(-1)">−</button>
+      <span class="count-num" id="stockCountDisplay">3</span>
+      <button class="count-btn" onclick="changeStockCount(1)">+</button>
+    </div>
+  </div>
+  <div class="stock-inputs" id="stockInputs"></div>
+</div>
+
+<button class="calc-btn" onclick="calculate()">計算配置 →</button>
+```
+
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-label">// 配置結果</div>
+    <div class="overview-grid">
+      <div class="overview-card attack">
+        <div class="card-label">進攻部位</div>
+        <div class="card-amount" id="res-attack">—</div>
+        <div class="card-ratio" id="res-attack-ratio"></div>
+      </div>
+      <div class="overview-card defense">
+        <div class="card-label">防守部位</div>
+        <div class="card-amount" id="res-defense-top">—</div>
+        <div class="card-ratio" id="res-defense-ratio"></div>
+      </div>
+    </div>
+    <div id="stockResults"></div>
+    <div class="defense-result">
+      <div>
+        <div class="dlabel">防守備用資金</div>
+        <div class="damount" id="res-defense">—</div>
+      </div>
+      <div class="dnote" id="res-defense-note"></div>
+    </div>
+    <div class="remainder-note" id="remainderNote" style="display:none">
+      <span class="dot">◆</span>
+      <span id="remainderText"></span>
+    </div>
+  </div>
+
+</div>
+<script>
+let mode = 'normal';
+let stockCount = 3;
+const cache = {};
+const slots = Array.from({length:5}, () => ({ code:'', unit:'full', manual:'' }));
+
+function setMode(m) {
+mode = m;
+document.getElementById(‘btn-normal’).classList.toggle(‘active’, m===‘normal’);
+document.getElementById(‘btn-good’).classList.toggle(‘active’, m===‘good’);
+}
+
+function changeStockCount(d) {
+stockCount = Math.min(5, Math.max(1, stockCount+d));
+document.getElementById(‘stockCountDisplay’).textContent = stockCount;
+renderStockInputs();
+}
+
+function renderStockInputs() {
+const wrap = document.getElementById(‘stockInputs’);
+wrap.innerHTML = ‘’;
+for (let i = 0; i < stockCount; i++) {
+const el = document.createElement(‘div’);
+el.className = ‘sic’;
+el.id = `sic-${i}`;
+el.innerHTML = ` <div class="sic-top"> <div class="sic-idx">S${i+1}</div> <input class="sic-code" data-idx="${i}" placeholder="股票代號（如 2330）" value="${slots[i].code}" oninput="onInput(${i},this.value)" onblur="lookup(${i})"> <select class="sic-unit" data-idx="${i}" onchange="slots[${i}].unit=this.value"> <option value="full" ${slots[i].unit==='full'?'selected':''}>整張交易</option> <option value="odd"  ${slots[i].unit==='odd' ?'selected':''}>零股交易</option> </select> </div> <div class="sic-info" id="info-${i}"> <span class="tag-meta">輸入代號後自動查詢</span> </div> <div class="sic-manual" id="manual-${i}" style="display:none"> <span class="sic-manual-lbl">手動輸入價格：</span> <input class="sic-manual-inp" type="number" min="0" step="0.01" placeholder="每股（元）" data-midx="${i}" value="${slots[i].manual}" oninput="slots[${i}].manual=this.value"> <span class="sic-manual-lbl">元</span> </div>`;
+wrap.appendChild(el);
+if (slots[i].code && cache[slots[i].code]) renderInfo(i, cache[slots[i].code]);
+}
+}
+
+const debounce = {};
+function onInput(i, v) {
+slots[i].code = v.trim();
+clearTimeout(debounce[i]);
+const card = document.getElementById(`sic-${i}`);
+card.className = ‘sic’;
+document.getElementById(`info-${i}`).innerHTML = `<span class="tag-meta">輸入代號後自動查詢</span>`;
+document.getElementById(`manual-${i}`).style.display = ‘none’;
+if (v.trim().length >= 4) debounce[i] = setTimeout(() => lookup(i), 700);
+}
+
+async function lookup(i) {
+const code = slots[i].code;
+if (!code || code.length < 2) return;
+if (cache[code]) { renderInfo(i, cache[code]); return; }
+
+const card = document.getElementById(`sic-${i}`);
+card.className = ‘sic loading’;
+document.getElementById(`info-${i}`).innerHTML = `<span class="tag-spin">查詢中…</span>`;
+
+try {
+const r = await fetch(‘https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL’);
+if (!r.ok) throw new Error();
+const list = await r.json();
+const hit = list.find(s => s.Code === code);
+if (hit) {
+const p = parseFloat(hit.ClosingPrice?.replace(/,/g,’’)) || 0;
+const o = parseFloat(hit.OpeningPrice?.replace(/,/g,’’)) || p;
+const pct = o ? (((p-o)/o)*100).toFixed(2) : ‘0.00’;
+cache[code] = { name: hit.Name, price: p, changePct: pct, date: hit.Date||’’, market:‘上市’ };
+renderInfo(i, cache[code]);
+} else {
+await lookupOTC(i, code);
+}
+} catch(e) { showErr(i); }
+}
+
+async function lookupOTC(i, code) {
+try {
+const r = await fetch(‘https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes’);
+if (!r.ok) throw new Error();
+const list = await r.json();
+const hit = list.find(s => s.SecuritiesCompanyCode === code || s.Code === code);
+if (hit) {
+const p = parseFloat((hit.Close||hit.ClosingPrice||‘0’).replace(/,/g,’’)) || 0;
+const y = parseFloat((hit.PreviousClose||hit.Close||‘0’).replace(/,/g,’’)) || p;
+const pct = y ? (((p-y)/y)*100).toFixed(2) : ‘0.00’;
+cache[code] = { name: hit.CompanyName||hit.Name||code, price:p, changePct:pct, date:’’, market:‘上櫃’ };
+renderInfo(i, cache[code]);
+} else throw new Error();
+} catch(e) { showErr(i); }
+}
+
+function showErr(i) {
+document.getElementById(`sic-${i}`).className = ‘sic error’;
+document.getElementById(`info-${i}`).innerHTML = `<span class="tag-err">查無此代號，請確認或手動輸入</span>`;
+document.getElementById(`manual-${i}`).style.display = ‘flex’;
+}
+
+function renderInfo(i, info) {
+document.getElementById(`sic-${i}`).className = ‘sic loaded’;
+const pct = parseFloat(info.changePct);
+let cls=‘flat’, lbl=‘─ 平盤’;
+if (pct > 0) { cls=‘up’;   lbl=`▲ +${info.changePct}%`; }
+if (pct < 0) { cls=‘down’; lbl=`▼ ${info.changePct}%`; }
+const dt = info.date && info.date.length>=8
+? `${info.date.slice(0,4)}/${info.date.slice(4,6)}/${info.date.slice(6,8)}` : ‘’;
+document.getElementById(`info-${i}`).innerHTML =
+`<span class="tag-name">${info.name}</span> <span class="tag-price">$${info.price.toFixed(2)}</span> <span class="tag-change ${cls}">${lbl}</span> <span class="tag-meta">${info.market}${dt?' · '+dt:''}</span>`;
+document.getElementById(`manual-${i}`).style.display = ‘none’;
+}
+
+function getPrice(i) {
+const code = slots[i].code;
+if (code && cache[code]) return cache[code].price;
+return parseFloat(slots[i].manual) || 0;
+}
+function getName(i) {
+const code = slots[i].code;
+if (code && cache[code]) return cache[code].name;
+return code || `股票 ${i+1}`;
+}
+function fmtMoney(n) { return Math.floor(n).toLocaleString(‘zh-TW’) + ’ 元’; }
+
+function calculate() {
+const total = parseFloat(document.getElementById(‘totalCapital’).value);
+if (!total || total<=0) { alert(‘請輸入有效的總資金金額’); return; }
+
+const ar = mode===‘good’ ? 0.6 : 0.5;
+const attackTotal = Math.floor(total * ar);
+const defenseTotal = total - attackTotal;
+const perStock = Math.floor(attackTotal / stockCount);
+const perPortion = Math.floor(perStock / 3);
+
+document.getElementById(‘res-attack’).textContent = fmtMoney(attackTotal);
+document.getElementById(‘res-attack-ratio’).textContent = `佔總資金 ${(ar*100).toFixed(0)}%`;
+document.getElementById(‘res-defense-top’).textContent = fmtMoney(defenseTotal);
+document.getElementById(‘res-defense-ratio’).textContent = `佔總資金 ${((1-ar)*100).toFixed(0)}%`;
+
+const wrap = document.getElementById(‘stockResults’);
+wrap.innerHTML = ‘’;
+const purposes = [[‘P1’,‘建倉’,‘p1’],[‘P2’,‘加碼’,‘p2’],[‘P3’,‘攤平’,‘p3’]];
+
+for (let i=0; i<stockCount; i++) {
+const code = slots[i].code;
+const name = getName(i);
+const price = getPrice(i);
+const isOdd = slots[i].unit === ‘odd’;
+
+```
+const portionCells = purposes.map(([lbl,purpose,cls]) => {
+  let sharesHtml = '—';
+  if (price > 0) {
+    if (isOdd) {
+      sharesHtml = `<b>${Math.floor(perPortion/price).toLocaleString()}</b> 股`;
+    } else {
+      const lots = Math.floor(perPortion / (price * 1000));
+      sharesHtml = lots > 0 ? `<b>${lots}</b> 張` : `&lt;1 張`;
+    }
+  }
+  return `<div class="portion-cell ${cls}">
+    <div class="pc-label">${lbl}</div>
+    <div class="pc-amt">${fmtMoney(perPortion)}</div>
+    <div class="pc-shares">${sharesHtml}</div>
+    <div class="pc-purpose">${purpose}</div>
+  </div>`;
+}).join('');
+
+const priceMeta = price>0 ? `$${price.toFixed(2)} · ${isOdd?'零股':'整張'}` : `尚無價格資料`;
+
+const card = document.createElement('div');
+card.className = 'stock-result';
+card.innerHTML = `
+  <div class="srh">
+    <div class="srh-left">
+      <div class="srh-name">S${i+1}　${name}${code?`（${code}）`:''}</div>
+      <div class="srh-meta">${priceMeta}</div>
+    </div>
+    <div class="srh-badge">配置<br>${fmtMoney(perPortion*3)}</div>
+  </div>
+  <div class="portions-grid">${portionCells}</div>`;
+wrap.appendChild(card);
+```
+
+}
+
+const remainder = attackTotal - perStock*stockCount;
+const finalDefense = defenseTotal + remainder;
+const rnEl = document.getElementById(‘remainderNote’);
+if (remainder > 0) {
+rnEl.style.display = ‘flex’;
+document.getElementById(‘remainderText’).textContent =
+`進攻部位除不盡餘額 ${fmtMoney(remainder)}，已自動歸入防守備用資金。`;
+} else {
+rnEl.style.display = ‘none’;
+}
+document.getElementById(‘res-defense’).textContent = fmtMoney(finalDefense);
+document.getElementById(‘res-defense-note’).innerHTML = `備用彈藥<br>隨時可轉攻`;
+
+const results = document.getElementById(‘results’);
+results.classList.add(‘show’);
+results.scrollIntoView({ behavior:‘smooth’, block:‘start’ });
+}
+
+renderStockInputs();
+</script>
+
+</body>
+</html>
